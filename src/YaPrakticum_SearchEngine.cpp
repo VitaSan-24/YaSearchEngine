@@ -1,9 +1,9 @@
 //============================================================================
-// Name        : YaPrakticum_SearchEgine.cpp
+// Name        : YaPrakticum_SearchEngine.cpp
 // Author      : Vitaly Sandalov
 // Version     : 0.1
 // Copyright   : -
-// Description : The search engine.
+// Description : Search engine
 //============================================================================
 
 #include <algorithm>
