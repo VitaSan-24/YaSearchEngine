@@ -70,8 +70,10 @@ public:
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
-        const set<string> query_words = ParseQuery(raw_query);
-        auto matched_documents = FindAllDocuments(query_words);
+        set<string> query_words;
+        set<string> negative_words;
+        ParseQuery(raw_query, query_words, negative_words);
+        auto matched_documents = FindAllDocuments(query_words, negative_words);
 
         auto by_relevance = [](const Document& lhs, const Document& rhs) {
             return lhs.relevance > rhs.relevance;
@@ -108,18 +110,23 @@ private:
         return words;
     }
 
-    set<string> ParseQuery(const string& text) const {
-        set<string> query_words;
+    void ParseQuery(const string& text,
+    					   set<string>& query_words,
+						   set<string>& negative_words) const {
         for (const string& word : SplitIntoWordsNoStop(text)) {
-            query_words.insert(word);
+        	if (word[0] != '-')
+        		query_words.insert(word);
+        	else {
+        		negative_words.insert(word.substr(1));
+        	}
         }
-        return query_words;
     }
 
-    vector<Document> FindAllDocuments(const set<string>& query_words) const {
+    vector<Document> FindAllDocuments(const set<string>& query_words,
+    								  const set<string>& negative_words) const {
         vector<Document> matched_documents;
         for (const auto& document : documents_) {
-            const int relevance = MatchDocument(document, query_words);
+            const int relevance = MatchDocument(document, query_words, negative_words);
             if (relevance > 0) {
                 matched_documents.push_back({document.id, relevance});
             }
@@ -127,13 +134,18 @@ private:
         return matched_documents;
     }
 
-    static int MatchDocument(const DocumentContent& content, const set<string>& query_words) {
+    static int MatchDocument(const DocumentContent& content,
+    						 const set<string>& query_words,
+							 const set<string>& negative_words) {
         if (query_words.empty()) {
             return 0;
         }
         set<string> matched_words;
         for (const string& word : content.words) {
-            if (matched_words.count(word) != 0) {
+        	if ( negative_words.count(word) != 0){
+        		return 0;
+        	}
+            if (matched_words.count(word) != 0 ) {
                 continue;
             }
             if (query_words.count(word) != 0) {
