@@ -12,6 +12,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 
 using namespace std;
 
@@ -66,14 +67,17 @@ public:
 
     void AddDocument(int document_id, const string& document) {
         const vector<string> words = SplitIntoWordsNoStop(document);
-        documents_.push_back({document_id, words});
+        for (const string& word : words){
+        	set<int>& set_tmp = documents_[word];
+        	set_tmp.insert(document_id);
+        }
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
         set<string> query_words;
-        set<string> negative_words;
-        ParseQuery(raw_query, query_words, negative_words);
-        auto matched_documents = FindAllDocuments(query_words, negative_words);
+        Query query;
+        ParseQuery(raw_query, query);
+        auto matched_documents = FindAllDocuments(query);
 
         auto by_relevance = [](const Document& lhs, const Document& rhs) {
             return lhs.relevance > rhs.relevance;
@@ -87,12 +91,13 @@ public:
     }
 
 private:
-    struct DocumentContent {
-        int id = 0;
-        vector<string> words;
-    };
 
-    vector<DocumentContent> documents_;
+      struct Query {
+          set<string> plus_words;
+          set<string> minus_words;
+      };
+
+    map<string, set<int>> documents_;
 
     set<string> stop_words_;
 
@@ -111,48 +116,38 @@ private:
     }
 
     void ParseQuery(const string& text,
-    					   set<string>& query_words,
-						   set<string>& negative_words) const {
+    		Query& query) const {
         for (const string& word : SplitIntoWordsNoStop(text)) {
         	if (word[0] != '-')
-        		query_words.insert(word);
+        		query.plus_words.insert(word);
         	else {
-        		negative_words.insert(word.substr(1));
+        		query.minus_words.insert(word.substr(1));
         	}
         }
     }
 
-    vector<Document> FindAllDocuments(const set<string>& query_words,
-    								  const set<string>& negative_words) const {
+    vector<Document> FindAllDocuments(const Query& query) const {
         vector<Document> matched_documents;
-        for (const auto& document : documents_) {
-            const int relevance = MatchDocument(document, query_words, negative_words);
-            if (relevance > 0) {
-                matched_documents.push_back({document.id, relevance});
-            }
+        map<int,int> query_result;
+        for (const string& plus_word : query.plus_words) {
+        	const set<int>& tempset = documents_.find(plus_word)->second;
+        	for (int id : tempset){
+        		int& rel = query_result[id];
+        		++rel;
+        	 }
         }
-        return matched_documents;
-    }
+        for (const string& minus_word : query.minus_words) {
+        	const set<int>& tempset = documents_.find(minus_word)->second;
+        	for (int id : tempset){
+        		query_result.erase(id);
+       	 }
+        }
 
-    static int MatchDocument(const DocumentContent& content,
-    						 const set<string>& query_words,
-							 const set<string>& negative_words) {
-        if (query_words.empty()) {
-            return 0;
-        }
-        set<string> matched_words;
-        for (const string& word : content.words) {
-        	if ( negative_words.count(word) != 0){
-        		return 0;
-        	}
-            if (matched_words.count(word) != 0 ) {
-                continue;
-            }
-            if (query_words.count(word) != 0) {
-                matched_words.insert(word);
-            }
-        }
-        return static_cast<int>(matched_words.size());
+        for (auto& res : query_result){
+        	matched_documents.push_back({res.first, res.second});
+       }
+
+        return matched_documents;
     }
 };
 
