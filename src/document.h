@@ -7,11 +7,9 @@
 
 #pragma once
 
-
 enum class DocumentStatus {
     ACTUAL, IRRELEVANT, BANNED, REMOVED
 };
-
 
 struct Document {
     Document(int in_id, double in_relevance, int in_rating) :

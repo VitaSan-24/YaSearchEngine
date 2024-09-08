@@ -17,11 +17,10 @@
 
 using namespace std;
 
+SearchServer::SearchServer(){};
 
-SearchServer::SearchServer(const std::string& stop_words_text)
-    : SearchServer(
-        SplitIntoWords(stop_words_text))
-{
+SearchServer::SearchServer(const std::string &stop_words_text) :
+        SearchServer(SplitIntoWords(stop_words_text)) {
 }
 
 template<typename Container>
@@ -102,7 +101,7 @@ vector<Document> SearchServer::FindTopDocuments(const string &raw_query,
 }
 
 template<typename Filter>
-vector<Document> SearchServer::FindTopDocuments(const string &raw_query,
+vector<Document> SearchServer::FindTopDocuments(const std::string &raw_query,
         Filter filter_fun) const {
     vector<Document> result;
     set<string> query_words;
@@ -177,7 +176,8 @@ int SearchServer::GetDocumentId(int index) const {
     return insert_doc_.at(index);
 }
 
-SearchServer::DocumentProperties SearchServer::GetPropertiesDocument(const int &id) const {
+SearchServer::DocumentProperties SearchServer::GetPropertiesDocument(
+        const int &id) const {
     DocumentProperties doc_result;
     const auto &interator = properties_documents_.find(id);
     if (interator != properties_documents_.end()) {
@@ -299,7 +299,8 @@ vector<Document> SearchServer::FindAllDocuments(const Query &query,
             }
         }
         for (auto &res : query_result) {
-            SearchServer::DocumentProperties doc_prop = GetPropertiesDocument(res.first);
+            SearchServer::DocumentProperties doc_prop = GetPropertiesDocument(
+                    res.first);
             if (lambda_func(res.first, doc_prop.status, doc_prop.rating)) {
                 matched_documents.push_back( // @suppress("Invalid arguments")
                         { res.first, res.second, doc_prop.rating });
