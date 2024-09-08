@@ -16,11 +16,6 @@ using namespace std;
 #include "request_queue.h"
 #include "search_server.h"
 
-//template <typename Container>
-//auto Paginate(const Container& c, size_t page_size) {
-//    return Paginator(begin(c), end(c), page_size);
-//}
-
 ostream& operator<<(ostream& output, const Document& document) {
     output << "{ "s
         << "document_id = "s << document.id << ", "s
