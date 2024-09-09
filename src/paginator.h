@@ -1,21 +1,13 @@
+#pragma once
 /*
  * paginator.h
  *
  *  Created on: 7 сент. 2024 г.
  *      Author: vitasan
  */
-
-#pragma once
+#include <algorithm>
 #include <vector>
-#include <cstdlib>
-#include <stdexcept>
-#include <string>
 #include <iostream>
-
-template<typename Container>
-auto Paginate(const Container &c, size_t page_size) {
-    return Paginator(begin(c), end(c), page_size);
-}
 
 template<typename Iterator>
 class IteratorRange {
@@ -48,6 +40,18 @@ private:
     Iterator end_;
     size_t size_ = 0;
 };
+
+template<typename Iterator>
+std::ostream& operator<<(std::ostream &os,
+        const IteratorRange<Iterator> &document_range) {
+
+    for (Iterator it = document_range.begin(); it != document_range.end();
+            ++it) {
+        os << *it;
+    }
+
+    return os;
+}
 
 template<typename Iterator>
 class Paginator {
@@ -88,4 +92,9 @@ private:
     std::vector<IteratorRange<Iterator>> pages_;
     size_t size_ = 0;
 };
+
+template<typename Container>
+auto Paginate(const Container &c, size_t page_size) {
+    return Paginator(begin(c), end(c), page_size);
+}
 

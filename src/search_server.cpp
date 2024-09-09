@@ -17,30 +17,15 @@
 
 using namespace std;
 
-SearchServer::SearchServer(){};
+SearchServer::SearchServer() {
+}
+;
 
 SearchServer::SearchServer(const std::string &stop_words_text) :
         SearchServer(SplitIntoWords(stop_words_text)) {
 }
 
-template<typename Container>
-SearchServer::SearchServer(const Container &container) {
 
-    for (const string &word : container) {
-
-        if (!IsValidString(word)) {
-            throw invalid_argument(
-                    "Слово `"s + word + "` имеет запрещенные символы."s);
-            vector<string> words;
-        }
-
-        const auto &result = find(begin(stop_words_), end(stop_words_), word);
-        if (result == stop_words_.end())
-            if (!word.empty()) {
-                stop_words_.insert(word);
-            }
-    }
-}
 int SearchServer::GetDocumentCount() const {
     return document_count_;
 }
@@ -98,30 +83,6 @@ vector<Document> SearchServer::FindTopDocuments(const string &raw_query,
             [&find_status](int document_id, DocumentStatus status, int rating) {
                 return status == find_status;
             });
-}
-
-template<typename Filter>
-vector<Document> SearchServer::FindTopDocuments(const std::string &raw_query,
-        Filter filter_fun) const {
-    vector<Document> result;
-    set<string> query_words;
-    Query query;
-    ParseQuery(raw_query, query);
-    CheckQurey(query);
-    result = FindAllDocuments(query, filter_fun);
-
-    auto by_relevance = [](const Document &lhs, const Document &rhs) {
-        if (abs(lhs.relevance - rhs.relevance) < EPSILON) {
-            return lhs.rating > rhs.rating;
-        }
-        return lhs.relevance > rhs.relevance;
-    };
-
-    sort(result.begin(), result.end(), by_relevance);
-    if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
-        result.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
-    return result;
 }
 
 tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(
@@ -267,46 +228,5 @@ double SearchServer::CalcIDF(const string &word) const {
     return log(
             static_cast<double>(document_count_)
                     / static_cast<double>(word_to_document_freqs_.at(word).size()));
-}
-
-template<typename FilterFun>
-vector<Document> SearchServer::FindAllDocuments(const Query &query,
-        FilterFun lambda_func) const {
-    vector<Document> matched_documents;
-    map<int, double> query_result;
-
-    if (query.plus_words.size() != 0) {
-        for (const string &plus_word : query.plus_words) {
-            const auto &temp_map = word_to_document_freqs_.find(plus_word);
-            if (temp_map != word_to_document_freqs_.end()) {
-                const map<int, double> &temp_set = temp_map->second;
-                double idf = CalcIDF(plus_word);
-                for (auto &element : temp_set) {
-                    double &rel = query_result[element.first];
-                    rel = rel + idf * element.second;
-                }
-            }
-        }
-        if (query.minus_words.size() != 0) {
-            for (const string &minus_word : query.minus_words) {
-                const auto &temp_map = word_to_document_freqs_.find(minus_word);
-                if (temp_map != word_to_document_freqs_.end()) {
-                    const map<int, double> &temp_set = temp_map->second;
-                    for (auto &element : temp_set) {
-                        query_result.erase(element.first);
-                    }
-                }
-            }
-        }
-        for (auto &res : query_result) {
-            SearchServer::DocumentProperties doc_prop = GetPropertiesDocument(
-                    res.first);
-            if (lambda_func(res.first, doc_prop.status, doc_prop.rating)) {
-                matched_documents.push_back( // @suppress("Invalid arguments")
-                        { res.first, res.second, doc_prop.rating });
-            }
-        }
-    }
-    return matched_documents;
 }
 

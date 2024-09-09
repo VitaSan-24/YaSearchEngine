@@ -98,7 +98,7 @@ void TestCalcRating() {
             { 8, -3 });
     auto documents = server.FindTopDocuments("пушистый ухоженный кот мышь"s);
 
-    ASSERT_EQUAL_HINT(documents[0].rating, 2,
+    ASSERT_EQUAL_HINT(documents[0].rating, 2, // @suppress("Field cannot be resolved") // @suppress("Invalid arguments")
             "Не правильно считается рейтинг документа."s);
 }
 
@@ -116,9 +116,9 @@ void TestCalcRelevationDoc() {
     auto documents = server.FindTopDocuments("пушистый ухоженный кот"s);
 
     double EPSILON = 1e-6;
-    if (abs(documents[1].relevance - 0.173287) > EPSILON) {
+    if (abs(documents[1].relevance - 0.173287) > EPSILON) { // @suppress("Invalid arguments") // @suppress("Field cannot be resolved")
 
-        ASSERT_EQUAL_HINT(documents[1].relevance, 0.173287,
+        ASSERT_EQUAL_HINT(documents[1].relevance, 0.173287, // @suppress("Field cannot be resolved") // @suppress("Invalid arguments")
                 "Не правильно считается релевантность документа."s);
 
     }
@@ -146,11 +146,15 @@ void TestQueue() {
     // все еще 1439 запросов с нулевым результатом
     request_queue.AddFindRequest("curly dog"s);
     // новые сутки, первый запрос удален, 1438 запросов с нулевым результатом
+
     request_queue.AddFindRequest("big collar"s);
+    ASSERT_EQUAL_HINT(request_queue.GetNoResultRequests(), 1438,
+            "Не правильно работает очередь запросов. Должно быть 1438 пустых результатов"s);
     // первый запрос удален, 1437 запросов с нулевым результатом
     request_queue.AddFindRequest("sparrow"s);
-    cout << "Total empty requests: "s << request_queue.GetNoResultRequests()
-            << endl;
+    ASSERT_EQUAL_HINT(request_queue.GetNoResultRequests(), 1437,
+            "Не правильно работает очередь запросов. Должно быть 1437 пустых результатов"s);
+
 }
 
 void TestPage() {
@@ -173,12 +177,15 @@ void TestPage() {
             DocumentStatus::ACTUAL, { 1, 1, 1 });
     const auto search_results = search_server.FindTopDocuments("curly dog"s);
     size_t page_size = 2;
+    int page_count = 0;
     const auto pages = Paginate(search_results, page_size); // @suppress("Function cannot be instantiated") // @suppress("Invalid arguments")
     // Выводим найденные документы по страницам
     for (auto page = pages.begin(); page != pages.end(); ++page) { // @suppress("Method cannot be resolved")
-        cout << *page << endl; // @suppress("Invalid overload")
-        cout << "Page break"s << endl;
+        ++page_count;
     }
+
+    ASSERT_EQUAL_HINT(page_count, 3,
+            "Не правильно работает разделение результата запроса на страницы. Количество возвращаемых страниц должно быть три."s);
 }
 
 void TestMatchedMinusWordsDoNotResetPlusWords1() {
@@ -213,11 +220,11 @@ void TestSortRelevationDoc() {
     server.AddDocument(3, "ухоженный скворец евгений"s, DocumentStatus::BANNED,
             { 9 });
     auto documents = server.FindTopDocuments("пушистый ухоженный кот мышь"s);
-    ASSERT_EQUAL_HINT(documents[0].id, 1,
+    ASSERT_EQUAL_HINT(documents[0].id, 1, // @suppress("Invalid arguments") // @suppress("Field cannot be resolved")
             "Не правильная сортировка у документов по релевантности."s);
-    ASSERT_EQUAL_HINT(documents[1].id, 0,
+    ASSERT_EQUAL_HINT(documents[1].id, 0, // @suppress("Invalid arguments") // @suppress("Field cannot be resolved")
             "Не правильная сортировка у документов по релевантности."s);
-    ASSERT_EQUAL_HINT(documents[2].id, 2,
+    ASSERT_EQUAL_HINT(documents[2].id, 2, // @suppress("Invalid arguments") // @suppress("Field cannot be resolved")
             "Не правильная сортировка у документов по релевантности."s);
 
 }
@@ -237,9 +244,11 @@ void TestFilterUserPredicateDoc() {
             [](int document_id, DocumentStatus status, int rating) {
                 return document_id % 2 == 0;
             });
-    ASSERT_EQUAL_HINT(documents[0].id, 0,
+    ASSERT_EQUAL_HINT(documents[0].id,
+            0, // @suppress("Invalid arguments") // @suppress("Field cannot be resolved")
             "Не правильная фильтрация у документов по пользовательскому предикату."s);
-    ASSERT_EQUAL_HINT(documents[1].id, 2,
+    ASSERT_EQUAL_HINT(documents[1].id,
+            2, // @suppress("Invalid arguments") // @suppress("Field cannot be resolved")
             "Не правильная фильтрация у документов по пользовательскому предикату."s);
 
 }
@@ -258,5 +267,7 @@ void TestSearchServer() {
     RUN_TEST(TestSortRelevationDoc);
     RUN_TEST(TestFilterUserPredicateDoc);
     RUN_TEST(TestMatchedMinusWordsDoNotResetPlusWords1);
+    RUN_TEST(TestQueue);
+    RUN_TEST(TestPage);
 }
 

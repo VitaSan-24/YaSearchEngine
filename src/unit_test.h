@@ -6,12 +6,25 @@
 #define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s);
 #define ASSERT_EQUAL_HINT(a, b, hint) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, (hint));
 
-template <typename TestFunc>
-void RunTestImpl(const TestFunc& func, const std::string& test_name);
+template<typename TestFunc>
+void RunTestImpl(const TestFunc &func, const std::string &test_name);
 
-template <typename T, typename U>
-void AssertEqualImpl(const T& t, const U& u, const std::string& t_str, const std::string& u_str, const std::string& file,
-                     const std::string& func, unsigned line, const std::string& hint);
+template<typename T, typename U>
+void AssertEqualImpl(const T &t, const U &u, const std::string &t_str,
+        const std::string &u_str, const std::string &file,
+        const std::string &func, unsigned line, const std::string &hint) {
+    if (t != u) {
+        std::cout << std::boolalpha;
+        std::cout << file << "(" << line << "): " << func << ": ";
+        std::cout << "ASSERT_EQUAL(" << t_str << ", " << u_str << ") failed: ";
+        std::cout << t << " != " << u << ".";
+        if (!hint.empty()) {
+            std::cout << " Hint: " << hint;
+        }
+        std::cout << std::endl;
+        abort();
+    }
+}
 
 // Тест проверяет, что поисковая система исключает стоп-слова при добавлении документов
 void TestExcludeStopWordsFromAddedDocumentContent();
@@ -36,7 +49,6 @@ void TestFilterUserPredicateDoc();
 void TestPage();
 // Тестирование очереди запросов
 void TestQueue();
-
 
 /*
  Разместите код остальных тестов здесь

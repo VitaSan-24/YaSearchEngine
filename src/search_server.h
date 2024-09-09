@@ -1,3 +1,4 @@
+#pragma once
 /*
  * search_server.h
  *
@@ -5,12 +6,13 @@
  *      Author: vitasan
  */
 
-#pragma once
 #include <vector>
 #include <string>
 #include <map>
 #include <tuple>
+#include <algorithm>
 #include <set>
+#include <stdexcept>
 #include "document.h"
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
@@ -21,9 +23,9 @@ class SearchServer {
 public:
 
     SearchServer();
-    explicit SearchServer(const std::string &text_stop_words);
     template<typename Container>
     explicit SearchServer(const Container &container);
+    explicit SearchServer(const std::string &text_stop_words);
 
     int GetDocumentCount() const;
 
@@ -81,4 +83,88 @@ private:
     std::vector<Document> FindAllDocuments(const Query &query,
             FilterFun lambda_func) const;
 };
+
+template<typename Filter>
+std::vector<Document> SearchServer::FindTopDocuments(
+        const std::string &raw_query, Filter filter_fun) const {
+    std::vector<Document> result;
+    std::set<std::string> query_words;
+    Query query;
+    ParseQuery(raw_query, query);
+    CheckQurey(query);
+    result = FindAllDocuments(query, filter_fun);
+
+    auto by_relevance = [](const Document &lhs, const Document &rhs) {
+        if (std::abs(lhs.relevance - rhs.relevance) < EPSILON) {
+            return lhs.rating > rhs.rating;
+        }
+        return lhs.relevance > rhs.relevance;
+    };
+
+    std::sort(result.begin(), result.end(), by_relevance);
+    if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
+        result.resize(MAX_RESULT_DOCUMENT_COUNT);
+    }
+    return result;
+}
+
+template<typename FilterFun>
+std::vector<Document> SearchServer::FindAllDocuments(const Query &query,
+        FilterFun lambda_func) const {
+    std::vector<Document> matched_documents;
+    std::map<int, double> query_result;
+
+    if (query.plus_words.size() != 0) {
+        for (const std::string &plus_word : query.plus_words) {
+            const auto &temp_map = word_to_document_freqs_.find(plus_word);
+            if (temp_map != word_to_document_freqs_.end()) {
+                const std::map<int, double> &temp_set = temp_map->second;
+                double idf = CalcIDF(plus_word);
+                for (auto &element : temp_set) {
+                    double &rel = query_result[element.first];
+                    rel = rel + idf * element.second;
+                }
+            }
+        }
+        if (query.minus_words.size() != 0) {
+            for (const std::string &minus_word : query.minus_words) {
+                const auto &temp_map = word_to_document_freqs_.find(minus_word);
+                if (temp_map != word_to_document_freqs_.end()) {
+                    const std::map<int, double> &temp_set = temp_map->second;
+                    for (auto &element : temp_set) {
+                        query_result.erase(element.first);
+                    }
+                }
+            }
+        }
+        for (auto &res : query_result) {
+            SearchServer::DocumentProperties doc_prop = GetPropertiesDocument(
+                    res.first);
+            if (lambda_func(res.first, doc_prop.status, doc_prop.rating)) {
+                matched_documents.push_back( // @suppress("Invalid arguments")
+                        { res.first, res.second, doc_prop.rating });
+            }
+        }
+    }
+    return matched_documents;
+}
+
+template<typename Container>
+SearchServer::SearchServer(const Container &container) {
+
+    for (const std::string &word : container) {
+
+        if (!IsValidString(word)) {
+            throw std::invalid_argument(
+                    "Слово `" + word + "` имеет запрещенные символы.");
+            std::vector<std::string> words;
+        }
+
+        const auto &result = find(begin(stop_words_), end(stop_words_), word);
+        if (result == stop_words_.end())
+            if (!word.empty()) {
+                stop_words_.insert(word);
+            }
+    }
+}
 
